@@ -1,0 +1,36 @@
+# ============================================================
+# Re10k 评测配置（单卡版）
+# 基于官方 eval_re10k.yaml，适配单 GPU
+# 论文预期指标（2视图有位姿，256x256）：
+#   PSNR: 31.39  SSIM: 0.928  LPIPS: 0.078
+# ============================================================
+
+module: run_eval
+
+seed: 0
+
+eval_data:
+  dataset_name: re10k
+  dataset_name_log: re10k_2_view_posed_single
+  zero_out_cam_cond_p: 0.0      # 0.0 = 有位姿（提供GT位姿），1.0 = 无位姿
+  test_view_indices_path: ./assets/re10k_2v.json
+  num_cond_views: 2
+  video_path_type: bspline_interp_eased
+
+model:
+  arch: 'EncDecVitB/8'
+  attention_to_features_type: full_attention   # Re10k 模型用 full_attention
+
+opt:
+  batch_size: 64   # 单卡 A100 80GB 可用 64-128，显存不够就调小
+
+data:
+  im_size_hw:
+  - 256
+  - 256
+  eval_video_length: 100
+
+# Checkpoint 从 HuggingFace 自动下载
+checkpoint_path: hf://facebook/lagernvs_re10k_2v_256/model.pt
+
+log_dir: ./output

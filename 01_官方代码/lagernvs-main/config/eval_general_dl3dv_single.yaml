@@ -1,0 +1,36 @@
+# ============================================================
+# General 模型 512 评测配置（单卡版）
+# 在 DL3DV 上评测通用模型（无位姿模式，6视图，512x512）
+# 论文预期指标（General v2, DL3DV 6视图无位姿，512x512）：
+#   PSNR: 24.86  SSIM: 0.761  LPIPS: 0.181
+# ============================================================
+
+module: run_eval
+
+seed: 0
+
+eval_data:
+  dataset_name: dl3dv
+  dataset_name_log: dl3dv_general_6v_unposed_512
+  zero_out_cam_cond_p: 1.0      # 1.0 = 无位姿（模型自动估计）
+  test_view_indices_path: ./assets/dl3dv_6v.json
+  num_cond_views: 6
+  video_path_type: bspline_interp_eased
+
+model:
+  arch: 'EncDecVitB/8'
+  attention_to_features_type: bidirectional_cross_attention
+
+opt:
+  batch_size: 16   # 512 分辨率显存占用大，单卡先用 16
+
+data:
+  im_size_hw:
+  - 512
+  - 512
+  eval_video_length: 100
+
+# General 模型 checkpoint
+checkpoint_path: hf://facebook/lagernvs_general_512/model.pt
+
+log_dir: ./output

@@ -1,0 +1,39 @@
+=== NODE: anode16 GPU: NVIDIA A100-SXM4-80GB ===
+2.8.0+cu126 True
+=== general model 2-view UNPOSED 512 on 500 scenes ===
+{'module': 'run_eval', 'seed': 0, 'eval_data': {'dataset_name': 're10k', 'dataset_name_log': 're10k_2_view_unposed_500_general', 'zero_out_cam_cond_p': 1.0, 'test_view_indices_path': './assets/re10k_2v_500.json', 'num_cond_views': 2, 'video_path_type': 'bspline_interp_eased'}, 'model': {'arch': 'EncDecVitB/8', 'attention_to_features_type': 'bidirectional_cross_attention'}, 'opt': {'batch_size': 8}, 'data': {'im_size_hw': [512, 512], 'eval_video_length': 100}, 'checkpoint_path': 'hf://facebook/lagernvs_general_512/model.pt', 'log_dir': './output', '-c': None, 'config/eval_re10k_general_unposed_500': {'yaml': None}, '-e': None, 're10k_general_2v_512_500_unposed': None, '--opt': {'batch_size': None}, '8': None, 'exp_name': 're10k_general_2v_512_500_unposed'}
+Running eval
+Running setup on rank 0 with world size 1
+| distributed init (rank 0): 1, gpu 0
+[23:12:07.184874] {'module': 'run_eval', 'seed': 0, 'eval_data': {'dataset_name': 're10k', 'dataset_name_log': 're10k_2_view_unposed_500_general', 'zero_out_cam_cond_p': 1.0, 'test_view_indices_path': './assets/re10k_2v_500.json', 'num_cond_views': 2, 'video_path_type': 'bspline_interp_eased'}, 'model': {'arch': 'EncDecVitB/8', 'attention_to_features_type': 'bidirectional_cross_attention'}, 'opt': {'batch_size': 8}, 'data': {'im_size_hw': [512, 512], 'eval_video_length': 100}, 'checkpoint_path': 'hf://facebook/lagernvs_general_512/model.pt', 'log_dir': './output/re10k_general_2v_512_500_unposed', '-c': None, 'config/eval_re10k_general_unposed_500': {'yaml': None}, '-e': None, 're10k_general_2v_512_500_unposed': None, '--opt': {'batch_size': None}, '8': None, 'exp_name': 're10k_general_2v_512_500_unposed', 'rank': 0, 'world_size': 1, 'gpu': 0, 'distributed': True, 'dist_backend': 'nccl'}
+[23:12:15.344232] VGGT weights not used for the encoder
+[23:12:19.280432] Loading checkpoint from hf://facebook/lagernvs_general_512/model.pt
+[23:12:21.864394] Successfully loaded checkpoint from hf://facebook/lagernvs_general_512/model.pt
+[23:12:21.909559] Loaded checkpoint
+[23:12:21.917726] Found 500 sequences
+[23:12:35.700766] Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+[23:12:36.702238] Loading model from: /home/scc/pb25612046/.conda/envs/lagernvs/lib/python3.10/site-packages/lpips/weights/v0.1/vgg.pth
+[23:25:29.865125] Gathering scores from all processes...
+[23:25:29.873608] Padding local tensor of length 500 to max count: 500 
+[23:25:29.874365] Padding local tensor of length 500 to max count: 500 
+[23:25:29.874931] Padding local tensor of length 500 to max count: 500 
+[23:25:29.875207] Gathering scene names from all processes...
+[23:25:29.875273] Padding local tensor of length 500 on rank 0 to max count: 500 
+[23:25:29.876367] Evaluation metrics:
+[23:25:29.876441]   psnr: 27.9599
+[23:25:29.876475]   ssim: 0.8759
+[23:25:29.876503]   lpips: 0.1594
+[23:25:29.886545] Saved eval scores to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/scores_iter_000000.txt
+[23:25:29.888023] Found 500 sequences
+[23:25:29.891005] Starting video saving and bspline_interp_eased camera video rendering
+[23:25:41.569226] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/5aca87f95a9412c6_00058.png_00058_00133.mp4
+[23:25:53.120743] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/322261824c4a3003_00033.png_00033_00078.mp4
+[23:26:03.959159] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/17d9303ee77c3a3d_00017.png_00017_00063.mp4
+[23:26:14.927445] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/debc3490ba0bd84b_00034.png_00034_00081.mp4
+[23:26:25.942131] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/e124dfa7e996a414_00048.png_00048_00093.mp4
+[23:26:36.667939] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/aa91dfdd5f4ad32b_00008.png_00008_00057.mp4
+[23:26:47.682623] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/e4bcb18fa6aa91be_00032.png_00032_00079.mp4
+[23:26:58.552063] Saved video of length 100 to ./output/re10k_general_2v_512_500_unposed/re10k_2_view_unposed_500_general/videos_iter_000000/bc95e5c7e357f1b7_00035.png_00035_00091.mp4
+[23:27:04.531076] Finished video saving and camera loop rendering
+EVAL_EXIT=0
+=== scores ===

@@ -1,0 +1,24 @@
+module: run_eval
+seed: 0
+
+eval_data:
+  dataset_name: re10k
+  dataset_name_log: re10k_2_view_posed_500_general
+  zero_out_cam_cond_p: 0.0
+  test_view_indices_path: ./assets/re10k_2v_500.json
+  num_cond_views: 2
+  video_path_type: bspline_interp_eased
+
+model:
+  arch: EncDecVitB/8
+  attention_to_features_type: bidirectional_cross_attention
+
+opt:
+  batch_size: 8
+
+data:
+  im_size_hw: [512, 512]
+  eval_video_length: 100
+
+checkpoint_path: hf://facebook/lagernvs_general_512/model.pt
+log_dir: ./output

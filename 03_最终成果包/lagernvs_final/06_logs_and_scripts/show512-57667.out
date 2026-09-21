@@ -1,0 +1,87 @@
+=== NODE: anode16 GPU: NVIDIA A100-SXM4-80GB ===
+2.8.0+cu126 True
+===  e9670b30a2c0e348 6 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 6 images, shape: torch.Size([1, 6, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+Rays shape: torch.Size([1, 106, 6, 288, 512]), cam_tokens shape: torch.Size([1, 106, 11])
+Loading model from facebook/lagernvs_general_512...
+VGGT weights not used for the encoder
+Model loaded: 1,103,348,352 parameters
+Rendering 100 frames...
+Output video shape: torch.Size([1, 100, 3, 288, 512])
+Saved video of length 100 to /home/scc/pb25612046/lagernvs/outputs/showcase512/e9670b30a2c0e348_6v_100f.mp4
+Saved to /home/scc/pb25612046/lagernvs/outputs/showcase512/e9670b30a2c0e348_6v_100f.mp4
+exit= 0
+===  e9670b30a2c0e348 2 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 2 images, shape: torch.Size([1, 2, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+Rays shape: torch.Size([1, 102, 6, 288, 512]), cam_tokens shape: torch.Size([1, 102, 11])
+Loading model from facebook/lagernvs_general_512...
+VGGT weights not used for the encoder
+Model loaded: 1,103,348,352 parameters
+Rendering 100 frames...
+Output video shape: torch.Size([1, 100, 3, 288, 512])
+Saved video of length 100 to /home/scc/pb25612046/lagernvs/outputs/showcase512/e9670b30a2c0e348_2v_100f.mp4
+Saved to /home/scc/pb25612046/lagernvs/outputs/showcase512/e9670b30a2c0e348_2v_100f.mp4
+exit= 0
+===  cdf439b17a6a98d4 6 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 6 images, shape: torch.Size([1, 6, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+exit= 1
+===  cdf439b17a6a98d4 2 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 2 images, shape: torch.Size([1, 2, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+Rays shape: torch.Size([1, 102, 6, 288, 512]), cam_tokens shape: torch.Size([1, 102, 11])
+Loading model from facebook/lagernvs_general_512...
+VGGT weights not used for the encoder
+Model loaded: 1,103,348,352 parameters
+Rendering 100 frames...
+Output video shape: torch.Size([1, 100, 3, 288, 512])
+Saved video of length 100 to /home/scc/pb25612046/lagernvs/outputs/showcase512/cdf439b17a6a98d4_2v_100f.mp4
+Saved to /home/scc/pb25612046/lagernvs/outputs/showcase512/cdf439b17a6a98d4_2v_100f.mp4
+exit= 0
+===  ee9503a872caad73 6 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 6 images, shape: torch.Size([1, 6, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+Rays shape: torch.Size([1, 106, 6, 288, 512]), cam_tokens shape: torch.Size([1, 106, 11])
+Loading model from facebook/lagernvs_general_512...
+VGGT weights not used for the encoder
+Model loaded: 1,103,348,352 parameters
+Rendering 100 frames...
+Output video shape: torch.Size([1, 100, 3, 288, 512])
+Saved video of length 100 to /home/scc/pb25612046/lagernvs/outputs/showcase512/ee9503a872caad73_6v_100f.mp4
+Saved to /home/scc/pb25612046/lagernvs/outputs/showcase512/ee9503a872caad73_6v_100f.mp4
+exit= 0
+===  59636f39d067119d 6 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 6 images, shape: torch.Size([1, 6, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+Rays shape: torch.Size([1, 106, 6, 288, 512]), cam_tokens shape: torch.Size([1, 106, 11])
+Loading model from facebook/lagernvs_general_512...
+VGGT weights not used for the encoder
+Model loaded: 1,103,348,352 parameters
+Rendering 100 frames...
+Output video shape: torch.Size([1, 100, 3, 288, 512])
+Saved video of length 100 to /home/scc/pb25612046/lagernvs/outputs/showcase512/59636f39d067119d_6v_100f.mp4
+Saved to /home/scc/pb25612046/lagernvs/outputs/showcase512/59636f39d067119d_6v_100f.mp4
+exit= 0
+===  45a00d135c5388fc 6 views ===
+Device: cuda, dtype: torch.bfloat16
+Loaded 6 images, shape: torch.Size([1, 6, 3, 288, 512])
+Creating target camera path (downloads VGGT on first run)...
+Rays shape: torch.Size([1, 106, 6, 288, 512]), cam_tokens shape: torch.Size([1, 106, 11])
+Loading model from facebook/lagernvs_general_512...
+VGGT weights not used for the encoder
+Model loaded: 1,103,348,352 parameters
+Rendering 100 frames...
+Output video shape: torch.Size([1, 100, 3, 288, 512])
+Saved video of length 100 to /home/scc/pb25612046/lagernvs/outputs/showcase512/45a00d135c5388fc_6v_100f.mp4
+Saved to /home/scc/pb25612046/lagernvs/outputs/showcase512/45a00d135c5388fc_6v_100f.mp4
+exit= 0
+SHOWCASE_ALL_DONE
+SHOWCASE_EXIT=0

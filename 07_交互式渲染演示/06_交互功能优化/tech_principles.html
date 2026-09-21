@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LagerNVS · 两种演示的技术原理</title>
+<style>
+  :root {
+    --bg: #081016;
+    --ink: #e7eef5;
+    --muted: #93a0b0;
+    --line: rgba(180, 205, 230, 0.14);
+    --teal: #4fb8a8;
+    --code: #0d1620;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Segoe UI", "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(900px 480px at 0% 0%, rgba(79,184,168,0.12), transparent 55%),
+      var(--bg);
+    line-height: 1.65;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 36px 22px 64px; }
+  a { color: var(--teal); }
+  .brand { letter-spacing: 0.16em; text-transform: uppercase; font-size: 0.7rem; color: var(--teal); }
+  h1 { font-size: clamp(1.6rem, 3.5vw, 2.2rem); line-height: 1.2; margin: 10px 0 8px; font-weight: 650; }
+  h2 { margin: 2rem 0 0.6rem; font-size: 1.2rem; font-weight: 650; }
+  h3 { margin: 1.25rem 0 0.4rem; font-size: 1.02rem; color: #d5e0ea; }
+  p, li { color: var(--muted); }
+  ul { padding-left: 1.2rem; }
+  .lead { color: #b7c4d2; font-size: 1.02rem; }
+  .box {
+    margin: 1rem 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    background: rgba(0,0,0,0.28);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 0.82rem;
+    color: #cfe3df;
+    white-space: pre-wrap;
+  }
+  .nav { margin-top: 8px; font-size: 0.9rem; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
+  strong { color: #dbe6f0; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">LagerNVS · Technical notes</div>
+    <h1>两个「神经网络渲染」入口，底层是怎么做到的</h1>
+    <p class="lead">门户里的 <strong>Live</strong> 和 <strong>Offline</strong> 并不是两套互不相干的模型。它们共享同一套 LagerNVS 前馈新视角合成网络；差别在于「这一帧像素是当场算出来的，还是事先算好再拿来交互」。</p>
+    <p class="nav"><a id="back" href="portal.html">← 返回门户</a></p>
+
+    <h2>1. 要解决什么问题：新视角合成（NVS）</h2>
+    <p>给你几张（甚至一张）场景照片，要生成<strong>相机移到别处之后</strong>「应该看到什么」。传统做法要么建显式 3D（网格 / 点云 / 体素），要么优化一个场景专用场（NeRF、3D Gaussian Splatting）。LagerNVS 走的是另一条路：</p>
+    <ul>
+      <li><strong>前馈（feed-forward）</strong>：场景进来后一次编码，目标视角一次前向就能出图，不必为每个新场景长时间优化。</li>
+      <li><strong>无显式 3D 资产</strong>：不存 mesh / Gaussian；几何信息压在一组 <strong>latent scene tokens</strong>（潜在场景令牌）里，所以叫 <em>Latent Geometry</em>。</li>
+      <li><strong>可泛化</strong>：在大规模多视图数据上训好，野外照片也能估位姿并渲染。</li>
+    </ul>
+
+    <h2>2. 模型骨架：Encoder（重建器）+ Renderer（渲染器）</h2>
+    <p>官方架构名 <code>EncDecVitB/8</code>：ViT-B 量级，patch size = 8。代码上就是 <code>EncoderDecoder</code> = <code>Reconstructor</code> + <code>Renderer</code>。</p>
+    <div class="box">输入照片 I₁…Iₙ
+    ↓  VGGT 系 Encoder（3D-aware）
+潜在场景令牌  rec_tokens   ← 场景被「记住」在这里
+    ↓  目标相机的 Plücker 射线场  target_rays
+12 层 Transformer Renderer（对 rec_tokens 做 cross-attention）
+    ↓
+目标视角 RGB 图（sigmoid 输出到 [0,1]）</div>
+
+    <h3>2.1 Encoder：VGGT 提「带几何偏见」的场景令牌</h3>
+    <p>VGGT（Visual Geometry Grounded Transformer）在大量多视图几何任务上预训练，本身就会从图像里抽出对相机、深度、对应关系敏感的特征。LagerNVS 把它当作 <strong>Reconstructor</strong>：</p>
+    <ul>
+      <li>吃多张输入图（可无已知外参）；</li>
+      <li>配合相机相关 token；</li>
+      <li>输出每视图、每 patch 的特征向量，拼成 <code>rec_tokens</code>。</li>
+    </ul>
+    <p>这一步只做一次（或切换场景时重做）。交互拖相机时<strong>不再重跑 Encoder</strong>，所以 Live 才能接近实时。</p>
+
+    <h3>2.2 目标相机怎么告诉网络：Plücker 射线</h3>
+    <p>新视角不是「给一张空白图让网络瞎猜」，而是给每个像素一条 <strong>Plücker 射线</strong>（用 6 维表示空间直线：方向 + 矩）。把整幅目标图像的射线排成 <code>C×H×W</code> 的射线图，再 <code>PatchEmbed</code> 成目标 token。网络看到的是：「在这个相机位姿下，每个图像块对应哪条空间射线」，从而把查询锚定到几何上——这就是论文说的 <em>3D biases without explicit 3D</em>。</p>
+
+    <h3>2.3 Renderer：对场景令牌做交叉注意力「查询颜色」</h3>
+    <p><code>Renderer.forward(rec_tokens, target_rays)</code> 大致是：</p>
+    <ol>
+      <li>射线图 → patch tokens（+ 少量 register tokens）；</li>
+      <li>经过 12 层 block：目标 token <strong>self-attn</strong>，并对 <code>rec_tokens</code> 做 <strong>cross-attn</strong>（General 模型常用 bidirectional cross-attention）；</li>
+      <li><code>FinalLayer</code> 把每个 patch 的隐向量解成 <code>patch_size×patch_size×3</code> 颜色，拼回整图。</li>
+    </ol>
+    <p>直觉：目标视角的每个小块在问「场景记忆里和我这条射线最相关的外观是什么」，用注意力从 latent geometry 里读出颜色——<strong>渲染 = 条件生成，不是光栅化三角形</strong>。</p>
+
+    <h2>3. Live 门户：同一套网络，边拖边渲</h2>
+    <p>对应官方 Browser Viewer：<code>run_interactive_server.py</code> + <code>interactive_viewer.html</code>。</p>
+    <h3>3.1 启动时（慢、做一次）</h3>
+    <ul>
+      <li>加载 LagerNVS 权重 + VGGT；</li>
+      <li>对 <code>test_data/场景/</code> 里的照片 <code>prepare_scene</code>：估位姿、编码得到该场景的 <code>rec_tokens</code>；</li>
+      <li>可选：把 <code>model.renderer(...)</code> 捕获成 <strong>CUDA Graph</strong>，避免每帧上百次 kernel 启动的 Python 开销。</li>
+    </ul>
+    <h3>3.2 交互时（快、每帧）</h3>
+    <div class="box">浏览器：拖拽 / WASD → 算出 4×4 相机矩阵 w2c
+        → WebSocket 发给 GPU 服务
+服务：w2c → Plücker rays → renderer(rec_tokens, rays) → RGB
+        → JPEG 编码 → WebSocket 推回
+浏览器：画到 canvas</div>
+    <p>状态栏里会区分 <strong>viewer FPS</strong>（含网络往返）和 <strong>GPU render FPS</strong>（纯推理）。隧道一差，你感觉「卡」，但往往是带宽/延迟，不是网络完全没在渲。</p>
+    <p><strong>Live 的技术本质</strong>：神经网络推理循环 + 位姿流；像素是「现算」的，所以视角连续、自由度高，也必须有 GPU 作业在线。</p>
+
+    <h2>4. Offline 门户：同一套网络，结果预烘焙再交互</h2>
+    <p>对应本仓库的 <code>offline_orbit_viewer.html</code> + 预渲染静帧 / orbit 视频。</p>
+    <h3>4.1 离线包是怎么来的</h3>
+    <ul>
+      <li>用同一 LagerNVS（或评测管线）对固定相机轨迹批量渲染；</li>
+      <li>产出 HQ 对比静帧（GT | Pred）、环绕 orbit、直线 path 等 mp4/png；</li>
+      <li>写入 <code>offline_manifest.json</code>，本机 HTTP 静态托管。</li>
+    </ul>
+    <h3>4.2 浏览器里在干什么</h3>
+    <p><strong>不再跑神经网络</strong>。页面只是：切场景、显示静帧、对视频做时间轴 scrub（拖拽 ≈ 在预计算轨迹上滑动相机）。看起来像「交互渲染」，工程上是 <strong>交互式回放预计算神经渲染结果</strong>。</p>
+    <p><strong>Offline 的技术本质</strong>：把 Live 里「每帧一次 renderer」提前做完并压成媒体；用交互 UI 掩盖「轨迹是锁死的」这一限制，换稳定、清晰、无 GPU。</p>
+
+    <h2>5. 对照：为何观感不一样</h2>
+    <ul>
+      <li><strong>清晰度</strong>：Offline 的 HQ still 常是高 JPEG/PNG 评测分辨率；Live 受实时分辨率、JPEG 质量、隧道带宽限制。</li>
+      <li><strong>自由度</strong>：Live 任意位姿（未观测区域仍会糊/错）；Offline 只能走已渲轨迹。</li>
+      <li><strong>稳定性</strong>：Offline 只依赖本机文件服务；Live 依赖 Slurm 作业 + SSH/隧道。</li>
+      <li><strong>算力位置</strong>：Live = 远程 A100；Offline = 渲染已在过去发生，现在是 CPU/浏览器解码。</li>
+    </ul>
+
+    <h2>6. 与 NeRF / 3D Gaussian Splatting 的对比</h2>
+    <ul>
+      <li><strong>NeRF</strong>：按场景优化 MLP 场，新场景要训很久；渲染是体积积分。</li>
+      <li><strong>3DGS</strong>：显式存大量高斯，光栅化快，但通常仍偏「每场景优化」。</li>
+      <li><strong>LagerNVS</strong>：显式几何换成 latent tokens；用目标射线去 cross-attend 出颜色；训一次、推多场景；Live 交互靠「编码一次 + 反复渲染」。</li>
+    </ul>
+
+    <hr>
+    <p>论文与项目页：<a href="https://arxiv.org/abs/2603.20176" target="_blank" rel="noopener">arXiv:2603.20176</a> · <a href="https://szymanowiczs.github.io/lagernvs" target="_blank" rel="noopener">Project page</a></p>
+    <p class="nav"><a href="portal.html">← 返回门户</a></p>
+  </div>
+<script>
+  const v = new URLSearchParams(location.search).get("v");
+  if (v === "me" || v === "share") {
+    document.getElementById("back").href = "portal.html?v=" + v;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LagerNVS Interactive Demo (Offline)</title>
+<style>
+  :root {
+    --bg: #07090c;
+    --panel: rgba(12, 16, 22, 0.88);
+    --line: rgba(190, 210, 230, 0.14);
+    --text: #e8eef6;
+    --muted: #8b97a8;
+    --accent: #5ec4b6;
+    --accent2: #d7ebe7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    color: var(--text);
+    font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;
+    background:
+      radial-gradient(900px 500px at 10% -5%, rgba(94, 196, 182, 0.10), transparent 55%),
+      radial-gradient(700px 420px at 95% 0%, rgba(80, 110, 160, 0.14), transparent 50%),
+      var(--bg);
+    overflow: hidden;
+  }
+  .shell { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+  .top {
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(10,14,20,0.95), rgba(10,14,20,0.55));
+  }
+  .brand {
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  h1 {
+    font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+    font-weight: 650;
+    letter-spacing: 0.01em;
+  }
+  .sub {
+    margin-top: 6px;
+    max-width: 90ch;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+  .main {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 270px 1fr;
+  }
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: 150px 1fr; }
+    .side { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+  .side {
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    overflow: auto;
+    min-height: 0;
+  }
+  .side h2 {
+    position: sticky; top: 0; z-index: 1;
+    padding: 10px 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(10, 14, 20, 0.95);
+    border-bottom: 1px solid var(--line);
+  }
+  .group-label {
+    padding: 10px 12px 4px;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6f7d90;
+  }
+  .scene-btn {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-bottom: 1px solid rgba(190,210,230,0.06);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.84rem;
+    padding: 9px 12px;
+    cursor: pointer;
+  }
+  .scene-btn:hover { background: rgba(94,196,182,0.08); }
+  .scene-btn.active {
+    background: rgba(94,196,182,0.16);
+    box-shadow: inset 3px 0 0 var(--accent);
+    color: var(--accent2);
+  }
+  .scene-btn .meta {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .stage-wrap {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .stage {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    position: relative;
+    background: #000;
+    cursor: default;
+    user-select: none;
+    touch-action: none;
+    overflow: auto;
+  }
+  .stage.scrub { cursor: ew-resize; }
+  .stage.grabbing { cursor: grabbing; }
+  #still, #frame {
+    display: none;
+    background: #000;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    max-width: calc(100% - 24px);
+    max-height: calc(100% - 24px);
+    width: auto;
+    height: auto;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  #frame {
+    image-rendering: auto; /* video: avoid harsh nearest-neighbor */
+  }
+  #still.on, #frame.on { display: block; }
+  .hud {
+    position: absolute;
+    left: 12px; top: 12px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(232,238,246,0.86);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+    pointer-events: none;
+    max-width: min(46ch, 72%);
+  }
+  .status {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    font-size: 0.78rem;
+    color: rgba(232,238,246,0.8);
+    background: rgba(0,0,0,0.45);
+    padding: 4px 10px;
+    border-radius: 3px;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .inputs {
+    position: absolute;
+    left: 12px;
+    bottom: 14px;
+    display: flex;
+    gap: 6px;
+    align-items: end;
+    pointer-events: none;
+  }
+  .inputs img {
+    height: 64px;
+    width: auto;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: #111;
+  }
+  .inputs .cap {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    border-top: 1px solid var(--line);
+    background: rgba(10, 14, 20, 0.92);
+  }
+  .bar label {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .btn {
+    border: 1px solid var(--line);
+    background: #141a24;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.84rem;
+    padding: 6px 11px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: rgba(94,196,182,0.55); }
+  .btn.active {
+    background: rgba(94,196,182,0.2);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+  .seek { flex: 1; min-width: 140px; accent-color: var(--accent); }
+  .err { padding: 24px; color: #ffb4b4; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="top">
+      <div class="brand">LagerNVS · Offline package</div>
+      <h1 id="title">Interactive demo</h1>
+      <p class="sub" id="subtitle">Loading…</p>
+    </header>
+
+    <div class="main">
+      <aside class="side">
+        <h2>Scenes</h2>
+        <div id="scene-list"></div>
+      </aside>
+
+      <section class="stage-wrap">
+        <div class="stage" id="stage">
+          <img id="still" alt="HQ still">
+          <video id="frame" playsinline preload="auto" muted></video>
+          <div class="hud" id="hud"></div>
+          <div class="inputs" id="inputs"></div>
+          <div class="status" id="status">Ready</div>
+        </div>
+        <div class="bar">
+          <button type="button" class="btn" id="btn-prev">Prev</button>
+          <button type="button" class="btn" id="btn-play">Play</button>
+          <button type="button" class="btn" id="btn-next">Next</button>
+          <button type="button" class="btn" id="btn-orbit">Orbit</button>
+          <label>View</label>
+          <button type="button" class="btn active" id="view-still">HQ Still</button>
+          <button type="button" class="btn" id="view-orbit">Orbit video</button>
+          <button type="button" class="btn" id="view-line">Straight 240f</button>
+          <label>Zoom</label>
+          <button type="button" class="btn" id="zoom-native">1× native</button>
+          <button type="button" class="btn active" id="zoom-fit">Fit</button>
+          <input type="range" class="seek" id="seek" min="0" max="1000" value="0">
+          <span id="meta" style="color:var(--muted);font-size:0.8rem;min-width:10ch;">—</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+<script>
+const video = document.getElementById("frame");
+const still = document.getElementById("still");
+const stage = document.getElementById("stage");
+const listEl = document.getElementById("scene-list");
+const statusEl = document.getElementById("status");
+const metaEl = document.getElementById("meta");
+const seek = document.getElementById("seek");
+const inputsEl = document.getElementById("inputs");
+const hud = document.getElementById("hud");
+const btnPlay = document.getElementById("btn-play");
+const btnOrbit = document.getElementById("btn-orbit");
+
+let scenes = [];
+let index = 0;
+let viewMode = "auto"; // auto | still | orbit | line
+let zoomMode = "fit"; // stills are tall GT|Pred — fit by default
+let autoOrbit = true;
+let dragging = false;
+let dragStartX = 0;
+let dragStartT = 0;
+let seeking = false;
+
+function assetUrl(p) {
+  if (!p) return null;
+  return "/" + String(p).replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/");
+}
+function setStatus(t) { statusEl.textContent = t; }
+
+function effectiveMode(scene) {
+  if (viewMode === "still") return scene.still ? "still" : (scene.video ? "orbit" : "still");
+  if (viewMode === "orbit") return scene.video ? "orbit" : (scene.still ? "still" : "orbit");
+  if (viewMode === "line") return scene.path_video ? "line" : (scene.video ? "orbit" : "still");
+  // auto
+  if (scene.mode === "still" && scene.still) return "still";
+  if (scene.video) return "orbit";
+  if (scene.still) return "still";
+  return "orbit";
+}
+
+function applyZoom(el, iw, ih) {
+  if (!el) return;
+  if (zoomMode === "native") {
+    const maxW = stage.clientWidth - 24;
+    const maxH = stage.clientHeight - 24;
+    if (iw <= maxW && ih <= maxH) {
+      el.style.width = iw + "px";
+      el.style.height = ih + "px";
+      el.style.maxWidth = "none";
+      el.style.maxHeight = "none";
+    } else {
+      const s = Math.min(maxW / iw, maxH / ih);
+      el.style.width = Math.round(iw * s) + "px";
+      el.style.height = Math.round(ih * s) + "px";
+      el.style.maxWidth = "none";
+      el.style.maxHeight = "none";
+    }
+  } else {
+    el.style.width = "auto";
+    el.style.height = "auto";
+    el.style.maxWidth = "calc(100% - 24px)";
+    el.style.maxHeight = "calc(100% - 24px)";
+  }
+}
+
+function renderInputs(scene) {
+  const imgs = (scene.inputs || []).slice(0, 6);
+  if (!imgs.length) { inputsEl.innerHTML = ""; return; }
+  inputsEl.innerHTML =
+    `<span class="cap">Input images</span>` +
+    imgs.map((src) => `<img src="${src}" alt="input" loading="lazy" onerror="this.remove()">`).join("");
+}
+
+function renderList() {
+  const groups = {};
+  scenes.forEach((s, i) => { (groups[s.group] ||= []).push({ s, i }); });
+  let html = "";
+  for (const [g, items] of Object.entries(groups)) {
+    html += `<div class="group-label">${g}</div>`;
+    for (const { s, i } of items) {
+      html += `<button type="button" class="scene-btn ${i === index ? "active" : ""}" data-i="${i}">
+        ${s.title}<span class="meta">${s.note || ""}</span></button>`;
+    }
+  }
+  listEl.innerHTML = html;
+}
+
+function syncChrome(scene, mode) {
+  const hasStill = !!scene.still;
+  const hasVideo = !!scene.video;
+  const hasLine = !!scene.path_video;
+  document.getElementById("view-still").disabled = !hasStill;
+  document.getElementById("view-orbit").disabled = !hasVideo;
+  document.getElementById("view-line").disabled = !hasLine;
+  document.getElementById("view-still").classList.toggle("active", mode === "still");
+  document.getElementById("view-orbit").classList.toggle("active", mode === "orbit");
+  document.getElementById("view-line").classList.toggle("active", mode === "line");
+  const videoMode = mode === "orbit" || mode === "line";
+  btnPlay.disabled = !videoMode;
+  btnOrbit.disabled = !videoMode;
+  seek.disabled = !videoMode;
+  stage.classList.toggle("scrub", videoMode);
+  if (mode === "still") {
+    hud.innerHTML = "HQ 静帧 · 上 GT / 下 Pred<br>优先看这一组（远比 Orbit 清晰）<br>雾化/残影属于模型预测局限，不是文件损坏";
+  } else {
+    hud.innerHTML = "横向拖拽：scrub 相机轨迹<br>Orbit 分辨率约 640，细节会软于 HQ 静帧<br>未观测区域的雾化/残影来自模型本身";
+  }
+}
+
+function showStill(scene) {
+  video.pause();
+  video.classList.remove("on");
+  still.classList.add("on");
+  still.onload = () => {
+    applyZoom(still, still.naturalWidth || scene.w, still.naturalHeight || scene.h);
+    setStatus(`${scene.title} · ${still.naturalWidth}×${still.naturalHeight} still`);
+    metaEl.textContent = "HQ still";
+  };
+  still.onerror = () => {
+    setStatus("静帧加载失败");
+    metaEl.textContent = "load error";
+  };
+  still.src = scene.still;
+  btnPlay.textContent = "Play";
+  btnOrbit.classList.remove("active");
+}
+
+function showVideo(scene, mode) {
+  still.classList.remove("on");
+  video.classList.add("on");
+  const src = mode === "line" ? scene.path_video : scene.video;
+  setStatus("Loading " + scene.title);
+  video.src = src;
+  video.load();
+  video.onloadedmetadata = () => {
+    applyZoom(video, video.videoWidth || scene.w, video.videoHeight || scene.h);
+    if (autoOrbit) {
+      video.play().catch(() => {});
+      btnPlay.textContent = "Pause";
+      btnOrbit.classList.add("active");
+    } else {
+      video.pause();
+      btnPlay.textContent = "Play";
+      btnOrbit.classList.remove("active");
+    }
+    setStatus(`${scene.title} · ${video.videoWidth}×${video.videoHeight}`);
+  };
+  video.onerror = () => {
+    if (mode === "orbit" && scene.video_alt && video.src.indexOf(scene.video_alt) < 0) {
+      setStatus("Retry alternate video…");
+      video.src = scene.video_alt;
+      video.load();
+      return;
+    }
+    if (scene.still) {
+      setStatus("视频失败，已回退到 HQ 静帧");
+      viewMode = "still";
+      showStill(scene);
+      syncChrome(scene, "still");
+      return;
+    }
+    setStatus("视频加载失败");
+  };
+}
+
+function load(i) {
+  index = (i + scenes.length) % scenes.length;
+  const scene = scenes[index];
+  const mode = effectiveMode(scene);
+  renderList();
+  renderInputs(scene);
+  syncChrome(scene, mode);
+  if (mode === "still") showStill(scene);
+  else showVideo(scene, mode);
+}
+
+function tickMeta() {
+  if (!video.classList.contains("on") || !video.duration) return;
+  if (!seeking) seek.value = String(Math.round((video.currentTime / video.duration) * 1000));
+  metaEl.textContent = `${video.currentTime.toFixed(1)}s / ${video.duration.toFixed(1)}s`;
+}
+
+listEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-i]");
+  if (!btn) return;
+  viewMode = "auto";
+  load(Number(btn.dataset.i));
+});
+
+document.getElementById("btn-prev").onclick = () => { viewMode = "auto"; load(index - 1); };
+document.getElementById("btn-next").onclick = () => { viewMode = "auto"; load(index + 1); };
+btnPlay.onclick = () => {
+  if (!video.classList.contains("on")) return;
+  if (video.paused) {
+    video.play();
+    btnPlay.textContent = "Pause";
+    autoOrbit = true;
+    btnOrbit.classList.add("active");
+  } else {
+    video.pause();
+    btnPlay.textContent = "Play";
+    autoOrbit = false;
+    btnOrbit.classList.remove("active");
+  }
+};
+btnOrbit.onclick = () => {
+  if (!video.classList.contains("on")) return;
+  autoOrbit = !autoOrbit;
+  btnOrbit.classList.toggle("active", autoOrbit);
+  if (autoOrbit) { video.loop = true; video.play(); btnPlay.textContent = "Pause"; }
+  else { video.pause(); btnPlay.textContent = "Play"; }
+};
+
+document.getElementById("view-still").onclick = () => { viewMode = "still"; load(index); };
+document.getElementById("view-orbit").onclick = () => { viewMode = "orbit"; autoOrbit = true; load(index); };
+document.getElementById("view-line").onclick = () => { viewMode = "line"; autoOrbit = true; load(index); };
+
+document.getElementById("zoom-native").onclick = () => {
+  zoomMode = "native";
+  document.getElementById("zoom-native").classList.add("active");
+  document.getElementById("zoom-fit").classList.remove("active");
+  const scene = scenes[index];
+  if (still.classList.contains("on")) applyZoom(still, still.naturalWidth || scene.w, still.naturalHeight || scene.h);
+  else applyZoom(video, video.videoWidth || scene.w, video.videoHeight || scene.h);
+};
+document.getElementById("zoom-fit").onclick = () => {
+  zoomMode = "fit";
+  document.getElementById("zoom-fit").classList.add("active");
+  document.getElementById("zoom-native").classList.remove("active");
+  const scene = scenes[index];
+  if (still.classList.contains("on")) applyZoom(still, still.naturalWidth || scene.w, still.naturalHeight || scene.h);
+  else applyZoom(video, video.videoWidth || scene.w, video.videoHeight || scene.h);
+};
+
+seek.addEventListener("input", () => {
+  seeking = true;
+  if (!video.duration) return;
+  video.currentTime = (Number(seek.value) / 1000) * video.duration;
+});
+seek.addEventListener("change", () => { seeking = false; });
+
+stage.addEventListener("pointerdown", (e) => {
+  if (!video.classList.contains("on")) return;
+  if (e.target.closest("img")) return;
+  dragging = true;
+  stage.classList.add("grabbing");
+  stage.setPointerCapture(e.pointerId);
+  dragStartX = e.clientX;
+  dragStartT = video.currentTime || 0;
+  autoOrbit = false;
+  btnOrbit.classList.remove("active");
+  video.pause();
+  btnPlay.textContent = "Play";
+});
+stage.addEventListener("pointermove", (e) => {
+  if (!dragging || !video.duration) return;
+  const dx = e.clientX - dragStartX;
+  const dt = (dx / Math.max(stage.clientWidth, 1)) * video.duration;
+  let t = dragStartT + dt;
+  t = ((t % video.duration) + video.duration) % video.duration;
+  video.currentTime = t;
+});
+stage.addEventListener("pointerup", () => { dragging = false; stage.classList.remove("grabbing"); });
+stage.addEventListener("pointercancel", () => { dragging = false; stage.classList.remove("grabbing"); });
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === " " || e.code === "Space") { e.preventDefault(); btnPlay.click(); }
+  else if (e.key === "o" || e.key === "O") btnOrbit.click();
+  else if (e.key === "ArrowLeft") { e.preventDefault(); load(index - 1); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); load(index + 1); }
+});
+
+video.addEventListener("timeupdate", tickMeta);
+video.loop = true;
+window.addEventListener("resize", () => {
+  const scene = scenes[index];
+  if (!scene) return;
+  if (still.classList.contains("on")) applyZoom(still, still.naturalWidth || scene.w, still.naturalHeight || scene.h);
+  else applyZoom(video, video.videoWidth || scene.w, video.videoHeight || scene.h);
+});
+
+async function probeOk(url) {
+  if (!url) return false;
+  try {
+    const r = await fetch(url, { method: "HEAD", cache: "no-store" });
+    if (r.ok) return true;
+  } catch (_) {}
+  try {
+    const r = await fetch(url, { method: "GET", headers: { Range: "bytes=0-0" }, cache: "no-store" });
+    return r.ok || r.status === 206;
+  } catch (_) {
+    return false;
+  }
+}
+
+fetch("/offline_manifest.json")
+  .then((r) => { if (!r.ok) throw new Error("manifest missing"); return r.json(); })
+  .then(async (m) => {
+    document.getElementById("title").textContent = m.title || "Interactive demo";
+    const st = m.stats || {};
+    const baseSub = m.subtitle || "";
+    document.getElementById("subtitle").textContent =
+      st.scenes != null
+        ? `${st.scenes} 场景 · ${st.hq_stills || 0} HQ 静帧 · ${st.orbit_clips || 0} 合格轨道`
+        : (baseSub || "");
+    if (m.quality_note) {
+      document.getElementById("subtitle").textContent += " · " + m.quality_note;
+    }
+    const mapped = (m.scenes || []).map((s) => ({
+      ...s,
+      still: assetUrl(s.still),
+      video: assetUrl(s.video),
+      video_alt: assetUrl(s.video_alt),
+      path_video: assetUrl(s.path_video),
+      inputs: (s.inputs || []).map(assetUrl),
+    }));
+    const kept = [];
+    for (const s of mapped) {
+      const okStill = s.still ? await probeOk(s.still) : false;
+      const okVideo = s.video ? await probeOk(s.video) : false;
+      const okAlt = (!okVideo && s.video_alt) ? await probeOk(s.video_alt) : false;
+      if (okAlt && !okVideo) s.video = s.video_alt;
+      if (!okStill) s.still = null;
+      if (!okVideo && !okAlt) s.video = null;
+      if (s.path_video && !(await probeOk(s.path_video))) s.path_video = null;
+      if (!s.still && !s.video) continue;
+      const goodInputs = [];
+      for (const u of (s.inputs || []).slice(0, 6)) {
+        if (await probeOk(u)) goodInputs.push(u);
+      }
+      s.inputs = goodInputs;
+      s.note = (s.note || "") + (okStill || okVideo || okAlt ? "" : " · broken");
+      kept.push(s);
+    }
+    scenes = kept;
+    if (!scenes.length) throw new Error("无可用场景");
+    let sub = `${scenes.length} 场景可用`;
+    if (mapped.length !== scenes.length) sub += `（已过滤 ${mapped.length - scenes.length}）`;
+    if (m.quality_note) sub += " · " + m.quality_note;
+    document.getElementById("subtitle").textContent = sub;
+    setStatus("Ready");
+    load(0);
+  })
+  .catch((err) => {
+    document.body.innerHTML = `<div class="err">
+      离线演示加载失败（${err.message}）。<br><br>
+      请运行 <code>python start_portal.py</code> 后打开 <code>http://127.0.0.1:8766/</code>
+    </div>`;
+  });
+</script>
+</body>
+</html>

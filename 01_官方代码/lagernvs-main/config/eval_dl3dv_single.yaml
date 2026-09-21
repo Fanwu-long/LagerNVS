@@ -1,0 +1,36 @@
+# ============================================================
+# DL3DV 评测配置（单卡版）
+# 基于官方 eval_dl3dv.yaml，适配单 GPU
+# 论文预期指标（6视图有位姿，256x256）：
+#   PSNR: 29.45  SSIM: 0.904  LPIPS: 0.068
+# ============================================================
+
+module: run_eval
+
+seed: 0
+
+eval_data:
+  dataset_name: dl3dv
+  dataset_name_log: dl3dv_6_view_posed_single
+  zero_out_cam_cond_p: 0.0      # 0.0 = 有位姿，1.0 = 无位姿
+  test_view_indices_path: ./assets/dl3dv_6v.json
+  num_cond_views: 6
+  video_path_type: bspline_interp_eased
+
+model:
+  arch: 'EncDecVitB/8'
+  attention_to_features_type: bidirectional_cross_attention   # DL3DV 用双向交叉注意力
+
+opt:
+  batch_size: 64   # 单卡 A100 80GB 可用 64-128，显存不够就调小
+
+data:
+  im_size_hw:
+  - 256
+  - 256
+  eval_video_length: 100
+
+# Checkpoint 从 HuggingFace 自动下载
+checkpoint_path: hf://facebook/lagernvs_dl3dv_2-6_v_256/model.pt
+
+log_dir: ./output
